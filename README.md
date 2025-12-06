@@ -23,8 +23,8 @@ The viewer auto-loads `example.sarif` for demo purposes.
 
 ## Files
 
-- `example.sarif` - Demo data with sample Bandit findings
-- `self-test.sarif` - Semgrep scan of this viewer (0 findings)
+- `examples/example.sarif` - Demo data with sample Bandit findings
+- `examples/self-test.sarif` - Semgrep scan of this viewer (0 findings)
 
 ## Features
 

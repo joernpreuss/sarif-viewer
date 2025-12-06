@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Bandit",
+          "version": "1.7.5",
+          "informationUri": "https://bandit.readthedocs.io/",
+          "rules": [
+            {
+              "id": "B101",
+              "name": "assert_used",
+              "shortDescription": { "text": "Use of assert detected" },
+              "fullDescription": { "text": "Use of assert detected. The enclosed code will be removed when compiling to optimised byte code." },
+              "helpUri": "https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html"
+            },
+            {
+              "id": "B105",
+              "name": "hardcoded_password_string",
+              "shortDescription": { "text": "Hardcoded password string" },
+              "fullDescription": { "text": "Possible hardcoded password detected in source code." },
+              "helpUri": "https://bandit.readthedocs.io/en/latest/plugins/b105_hardcoded_password_string.html"
+            },
+            {
+              "id": "B301",
+              "name": "pickle",
+              "shortDescription": { "text": "Pickle usage detected" },
+              "fullDescription": { "text": "Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data." },
+              "helpUri": "https://bandit.readthedocs.io/en/latest/blacklists/blacklist_calls.html#b301-pickle"
+            },
+            {
+              "id": "B602",
+              "name": "subprocess_popen_with_shell_equals_true",
+              "shortDescription": { "text": "subprocess call with shell=True" },
+              "fullDescription": { "text": "subprocess call with shell=True identified, security issue." },
+              "helpUri": "https://bandit.readthedocs.io/en/latest/plugins/b602_subprocess_popen_with_shell_equals_true.html"
+            },
+            {
+              "id": "B608",
+              "name": "hardcoded_sql_expressions",
+              "shortDescription": { "text": "SQL Injection risk" },
+              "fullDescription": { "text": "Possible SQL injection vector through string-based query construction." },
+              "helpUri": "https://bandit.readthedocs.io/en/latest/plugins/b608_hardcoded_sql_expressions.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "B602",
+          "level": "error",
+          "message": { "text": "subprocess call with shell=True identified, security issue. Possible command injection vulnerability." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/utils/runner.py" },
+                "region": { "startLine": 42, "startColumn": 5 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B608",
+          "level": "error",
+          "message": { "text": "Possible SQL injection vector through string-based query construction: query = \"SELECT * FROM users WHERE id = \" + user_id" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/database/queries.py" },
+                "region": { "startLine": 87, "startColumn": 9 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B105",
+          "level": "warning",
+          "message": { "text": "Possible hardcoded password: 'password = \"admin123\"'" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/config/settings.py" },
+                "region": { "startLine": 15, "startColumn": 1 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B301",
+          "level": "warning",
+          "message": { "text": "Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/cache/serializer.py" },
+                "region": { "startLine": 23, "startColumn": 12 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B101",
+          "level": "note",
+          "message": { "text": "Use of assert detected. The enclosed code will be removed when compiling to optimised byte code." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/models/user.py" },
+                "region": { "startLine": 56, "startColumn": 8 }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "B101",
+          "level": "note",
+          "message": { "text": "Use of assert detected. The enclosed code will be removed when compiling to optimised byte code." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "tests/test_auth.py" },
+                "region": { "startLine": 34, "startColumn": 4 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -260,17 +260,44 @@
             }).join('');
         }
 
-        // Auto-load example.sarif for demo
-        fetch('examples/example.sarif')
-            .then(r => r.json())
-            .then(data => {
-                currentData = data;
-                document.getElementById('filename').textContent = '— example.sarif';
-                renderResults(data);
-            })
-            .catch(() => {
-                // File not found - user needs to upload manually
-            });
+        // Load file from URL parameter or auto-load example.sarif for demo
+        function loadFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileParam = urlParams.get('file') || urlParams.get('filename');
+
+            if (fileParam) {
+                // Load file specified in URL parameter
+                fetch(fileParam)
+                    .then(r => {
+                        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                        return r.json();
+                    })
+                    .then(data => {
+                        currentData = data;
+                        // Extract filename from path
+                        const filename = fileParam.split('/').pop();
+                        document.getElementById('filename').textContent = '— ' + filename;
+                        renderResults(data);
+                    })
+                    .catch(err => {
+                        alert('Error loading file from URL parameter: ' + err.message);
+                    });
+            } else {
+                // Auto-load example.sarif for demo
+                fetch('examples/example.sarif')
+                    .then(r => r.json())
+                    .then(data => {
+                        currentData = data;
+                        document.getElementById('filename').textContent = '— example.sarif';
+                        renderResults(data);
+                    })
+                    .catch(() => {
+                        // File not found - user needs to upload manually
+                    });
+            }
+        }
+
+        loadFromUrl();
     </script>
 </body>
 </html>

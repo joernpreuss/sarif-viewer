@@ -115,8 +115,8 @@
 
         <div id="dropzone">
             <p>Drop SARIF file here or click to upload</p>
-            <input type="file" id="fileInput" accept=".sarif,.json" style="display: none;">
         </div>
+        <input type="file" id="fileInput" accept=".sarif,.json" style="display: none;">
 
         <div class="stats" id="stats"></div>
 
@@ -133,14 +133,30 @@
     <script>
         let currentData = null;
         let currentFilter = 'all';
+        const DEFAULT_DROPZONE_HTML = '<p>Drop SARIF file here or click to upload</p>';
 
-        // Escape HTML to prevent XSS
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/&/g, '&amp;')
                       .replace(/</g, '&lt;')
                       .replace(/>/g, '&gt;')
                       .replace(/"/g, '&quot;');
+        }
+
+        function getFilename(path) {
+            return path.split(/[/\\]/).pop();
+        }
+
+        function setFilename(name) {
+            document.getElementById('filename').textContent = '— ' + name;
+        }
+
+        function getLevel(result) {
+            return result.level || 'warning';
+        }
+
+        function getSeverity(level) {
+            return level === 'error' ? 'high' : level === 'warning' ? 'medium' : 'low';
         }
 
         // Drag & Drop
@@ -181,7 +197,8 @@
             reader.onload = (e) => {
                 try {
                     currentData = JSON.parse(e.target.result);
-                    document.getElementById('filename').textContent = '— ' + file.name;
+                    setFilename(file.name);
+                    dropzone.innerHTML = DEFAULT_DROPZONE_HTML;
                     renderResults(currentData);
                     fileInput.value = '';
                 } catch (err) {
@@ -203,10 +220,7 @@
             // Stats
             const stats = { high: 0, medium: 0, low: 0 };
             results.forEach(r => {
-                const level = r.level || 'warning';
-                if (level === 'error') stats.high++;
-                else if (level === 'warning') stats.medium++;
-                else stats.low++;
+                stats[getSeverity(getLevel(r))]++;
             });
 
             document.getElementById('stats').innerHTML = `
@@ -231,16 +245,11 @@
             // Results
             const filtered = results.filter(r => {
                 if (currentFilter === 'all') return true;
-                const level = r.level || 'warning';
-                if (currentFilter === 'high' && level === 'error') return true;
-                if (currentFilter === 'medium' && level === 'warning') return true;
-                if (currentFilter === 'low' && level === 'note') return true;
-                return false;
+                return getSeverity(getLevel(r)) === currentFilter;
             });
 
             document.getElementById('results').innerHTML = filtered.map(result => {
-                const level = result.level || 'warning';
-                const severity = level === 'error' ? 'high' : level === 'warning' ? 'medium' : 'low';
+                const severity = getSeverity(getLevel(result));
                 const location = result.locations?.[0]?.physicalLocation;
                 const uri = location?.artifactLocation?.uri || 'unknown';
                 const line = location?.region?.startLine || '?';
@@ -270,13 +279,14 @@
                 // Check if we're using file:// protocol
                 if (isFileProtocol) {
                     // Show helpful message for local file usage
-                    const filename = fileParam.split('/').pop();
+                    const filename = getFilename(fileParam);
                     dropzone.innerHTML = `
                         <p style="color: #d29922; margin-bottom: 10px;">⚠️ Local file mode detected</p>
                         <p style="margin-bottom: 10px;">Please upload: <strong>${escapeHtml(filename)}</strong></p>
                         <p style="font-size: 12px; color: #8b949e; margin-bottom: 10px;">
                             For automatic loading, use a local web server:<br>
-                            <code style="background: #0d1117; padding: 2px 6px; border-radius: 3px;">python3 -m http.server 8000</code>
+                            <code style="background: #0d1117; padding: 2px 6px; border-radius: 3px;">npx serve</code> or
+                            <code style="background: #0d1117; padding: 2px 6px; border-radius: 3px;">python3 -m http.server</code>
                         </p>
                         <p style="font-size: 12px;">Click here or drop your file</p>
                     `;
@@ -291,9 +301,7 @@
                     })
                     .then(data => {
                         currentData = data;
-                        // Extract filename from path
-                        const filename = fileParam.split('/').pop();
-                        document.getElementById('filename').textContent = '— ' + filename;
+                        setFilename(getFilename(fileParam));
                         renderResults(data);
                     })
                     .catch(err => {
@@ -309,7 +317,7 @@
                     .then(r => r.json())
                     .then(data => {
                         currentData = data;
-                        document.getElementById('filename').textContent = '— example.sarif';
+                        setFilename('example.sarif');
                         renderResults(data);
                     })
                     .catch(() => {

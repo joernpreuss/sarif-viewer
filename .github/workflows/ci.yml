@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start server
+        run: |
+          python3 -m http.server 8080 &
+          sleep 2
+
+      - name: Test index.html loads
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/index.html)
+          [ "$status" = "200" ] || exit 1
+
+      - name: Test example.sarif is valid JSON
+        run: |
+          curl -s http://localhost:8080/examples/example.sarif | python3 -m json.tool > /dev/null
+
+      - name: Test self-test.sarif is valid JSON
+        run: |
+          curl -s http://localhost:8080/examples/self-test.sarif | python3 -m json.tool > /dev/null
+
+      - name: Test key functions exist
+        run: |
+          curl -s http://localhost:8080/index.html | grep -q "function escapeHtml"
+          curl -s http://localhost:8080/index.html | grep -q "function getFilename"
+          curl -s http://localhost:8080/index.html | grep -q "function renderResults"
+
+      - name: Test SARIF structure
+        run: |
+          curl -s http://localhost:8080/examples/example.sarif | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          assert 'runs' in data, 'Missing runs'
+          assert len(data['runs']) > 0, 'Empty runs'
+          assert 'results' in data['runs'][0], 'Missing results'
+          print('SARIF structure OK')
+          "

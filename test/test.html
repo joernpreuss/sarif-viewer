@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SARIF Viewer Tests</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #fff; padding: 20px; }
+        .pass { color: #4ade80; }
+        .fail { color: #f87171; }
+        .skip { color: #fbbf24; }
+        h1 { color: #60a5fa; }
+        .test { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>SARIF Viewer Tests</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = [];
+
+        function test(name, fn) {
+            try {
+                fn();
+                results.push({ name, pass: true });
+            } catch (e) {
+                results.push({ name, pass: false, error: e.message });
+            }
+        }
+
+        function assertEqual(actual, expected) {
+            if (actual !== expected) {
+                throw new Error(`Expected "${expected}", got "${actual}"`);
+            }
+        }
+
+        // Import functions from index.html (inline for testing)
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;');
+        }
+
+        function getFilename(path) {
+            return path.split(/[/\\]/).pop();
+        }
+
+        function getLevel(result) {
+            return result.level || 'warning';
+        }
+
+        function getSeverity(level) {
+            return level === 'error' ? 'high' : level === 'warning' ? 'medium' : 'low';
+        }
+
+        // Tests
+        test('escapeHtml: escapes <', () => {
+            assertEqual(escapeHtml('<script>'), '&lt;script&gt;');
+        });
+
+        test('escapeHtml: escapes &', () => {
+            assertEqual(escapeHtml('a & b'), 'a &amp; b');
+        });
+
+        test('escapeHtml: escapes quotes', () => {
+            assertEqual(escapeHtml('"test"'), '&quot;test&quot;');
+        });
+
+        test('escapeHtml: handles null', () => {
+            assertEqual(escapeHtml(null), '');
+        });
+
+        test('getFilename: unix path', () => {
+            assertEqual(getFilename('/path/to/file.sarif'), 'file.sarif');
+        });
+
+        test('getFilename: windows path', () => {
+            assertEqual(getFilename('C:\\Users\\file.sarif'), 'file.sarif');
+        });
+
+        test('getFilename: just filename', () => {
+            assertEqual(getFilename('file.sarif'), 'file.sarif');
+        });
+
+        test('getLevel: returns level', () => {
+            assertEqual(getLevel({ level: 'error' }), 'error');
+        });
+
+        test('getLevel: defaults to warning', () => {
+            assertEqual(getLevel({}), 'warning');
+        });
+
+        test('getSeverity: error -> high', () => {
+            assertEqual(getSeverity('error'), 'high');
+        });
+
+        test('getSeverity: warning -> medium', () => {
+            assertEqual(getSeverity('warning'), 'medium');
+        });
+
+        test('getSeverity: note -> low', () => {
+            assertEqual(getSeverity('note'), 'low');
+        });
+
+        // Fetch tests
+        test('example.sarif loads', async () => {
+            const r = await fetch('../examples/example.sarif');
+            if (!r.ok) throw new Error('Failed to load');
+            const data = await r.json();
+            if (!data.runs?.[0]) throw new Error('Invalid SARIF');
+        });
+
+        test('self-test.sarif loads', async () => {
+            const r = await fetch('../examples/self-test.sarif');
+            if (!r.ok) throw new Error('Failed to load');
+            const data = await r.json();
+            if (data.runs[0].results.length !== 0) throw new Error('Expected 0 results');
+        });
+
+        // Run async tests and render
+        (async () => {
+            const isFileProtocol = window.location.protocol === 'file:';
+
+            if (isFileProtocol) {
+                results.push({ name: 'example.sarif (skipped in file:// mode)', pass: true, skipped: true });
+                results.push({ name: 'self-test.sarif (skipped in file:// mode)', pass: true, skipped: true });
+            } else {
+                // Run fetch tests only on http/https
+                try {
+                    const r1 = await fetch('../examples/example.sarif');
+                    const d1 = await r1.json();
+                    results.push({
+                        name: 'example.sarif: valid SARIF',
+                        pass: d1.runs?.[0]?.results?.length === 6
+                    });
+                } catch (e) {
+                    results.push({ name: 'example.sarif: valid SARIF', pass: false, error: e.message });
+                }
+
+                try {
+                    const r2 = await fetch('../examples/self-test.sarif');
+                    const d2 = await r2.json();
+                    results.push({
+                        name: 'self-test.sarif: 0 findings',
+                        pass: d2.runs?.[0]?.results?.length === 0
+                    });
+                } catch (e) {
+                    results.push({ name: 'self-test.sarif: 0 findings', pass: false, error: e.message });
+                }
+            }
+
+            // Render results
+            const passed = results.filter(r => r.pass).length;
+            const total = results.length;
+
+            document.getElementById('results').innerHTML = `
+                <p><strong>${passed}/${total} tests passed</strong></p>
+                ${results.map(r => `
+                    <div class="test ${r.skipped ? 'skip' : r.pass ? 'pass' : 'fail'}">
+                        ${r.skipped ? '○' : r.pass ? '✓' : '✗'} ${r.name}
+                        ${r.error ? `<br>&nbsp;&nbsp;${r.error}` : ''}
+                    </div>
+                `).join('')}
+            `;
+        })();
+    </script>
+</body>
+</html>

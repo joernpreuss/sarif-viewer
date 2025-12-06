@@ -260,17 +260,65 @@
             }).join('');
         }
 
-        // Auto-load example.sarif for demo
-        fetch('examples/example.sarif')
-            .then(r => r.json())
-            .then(data => {
-                currentData = data;
-                document.getElementById('filename').textContent = '— example.sarif';
-                renderResults(data);
-            })
-            .catch(() => {
-                // File not found - user needs to upload manually
-            });
+        // Load file from URL parameter or auto-load example.sarif for demo
+        function loadFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileParam = urlParams.get('file') || urlParams.get('filename');
+            const isFileProtocol = window.location.protocol === 'file:';
+
+            if (fileParam) {
+                // Check if we're using file:// protocol
+                if (isFileProtocol) {
+                    // Show helpful message for local file usage
+                    const filename = fileParam.split('/').pop();
+                    dropzone.innerHTML = `
+                        <p style="color: #d29922; margin-bottom: 10px;">⚠️ Local file mode detected</p>
+                        <p style="margin-bottom: 10px;">Please upload: <strong>${escapeHtml(filename)}</strong></p>
+                        <p style="font-size: 12px; color: #8b949e; margin-bottom: 10px;">
+                            For automatic loading, use a local web server:<br>
+                            <code style="background: #0d1117; padding: 2px 6px; border-radius: 3px;">python3 -m http.server 8000</code>
+                        </p>
+                        <p style="font-size: 12px;">Click here or drop your file</p>
+                    `;
+                    return;
+                }
+
+                // Load file specified in URL parameter (works with http/https)
+                fetch(fileParam)
+                    .then(r => {
+                        if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                        return r.json();
+                    })
+                    .then(data => {
+                        currentData = data;
+                        // Extract filename from path
+                        const filename = fileParam.split('/').pop();
+                        document.getElementById('filename').textContent = '— ' + filename;
+                        renderResults(data);
+                    })
+                    .catch(err => {
+                        dropzone.innerHTML = `
+                            <p style="color: #f85149; margin-bottom: 10px;">❌ Error loading file</p>
+                            <p style="margin-bottom: 10px;">${escapeHtml(err.message)}</p>
+                            <p style="font-size: 12px;">Click here or drop your file to upload manually</p>
+                        `;
+                    });
+            } else {
+                // Auto-load example.sarif for demo
+                fetch('examples/example.sarif')
+                    .then(r => r.json())
+                    .then(data => {
+                        currentData = data;
+                        document.getElementById('filename').textContent = '— example.sarif';
+                        renderResults(data);
+                    })
+                    .catch(() => {
+                        // File not found - user needs to upload manually
+                    });
+            }
+        }
+
+        loadFromUrl();
     </script>
 </body>
 </html>
